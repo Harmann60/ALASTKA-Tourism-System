@@ -16,6 +16,7 @@ The name **ALASTKA** is inspired by Alaska and Chukotka—regions that appear fa
 - SQL
 - Draw.io (ER/EER Diagrams)
 - GitHub
+- Java JDBC
 
 ## Team Members
 - Harman Jassal
