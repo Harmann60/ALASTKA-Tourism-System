@@ -1,16 +1,34 @@
--- View all countries
+-- Queries
+-- view all countries
 SELECT * FROM Country;
 
--- Join City + Country
+-- Show booking details with user and accommodation
+SELECT b.BookingID, u.Name, a.AccommodationName
+FROM Booking b
+JOIN Users u ON b.UserID = u.UserID
+JOIN Accommodation a ON b.AccommodationID = a.AccommodationID;
+
+-- Show cities in a specific country
 SELECT City.CityName, Country.CountryName
 FROM City
-JOIN Country ON City.CountryID = Country.CountryID;
+JOIN Country ON City.CountryID = Country.CountryID
+WHERE Country.CountryName = 'India';
 
--- Budget filter example
-SELECT * FROM Accommodation
-WHERE PricePerNight < 2000;
+-- Show reviews with user name and tourist place
+SELECT u.Name, t.PlaceName, r.Rating, r.Comment
+FROM Review r
+JOIN Users u ON r.UserID = u.UserID
+JOIN TouristPlace t ON r.PlaceID = t.PlaceID;
 
--- User bookings
-SELECT Users.Name, Booking.BookingDate
-FROM Users
-JOIN Booking ON Users.UserID = Booking.UserID;
+-- Show affordable accommodations (≤ 3000)
+SELECT DISTINCT Country.CountryName, City.CityName, Accommodation.PricePerNight
+FROM Accommodation
+JOIN City ON Accommodation.CityID = City.CityID
+JOIN Country ON City.CountryID = Country.CountryID
+WHERE Accommodation.PricePerNight <= 3000;
+
+-- Show accommodations with city name
+SELECT a.AccommodationName, a.Type, a.PricePerNight, c.CityName
+FROM Accommodation a
+JOIN City c ON a.CityID = c.CityID;
+
