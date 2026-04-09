@@ -143,7 +143,6 @@ public class AdminDashboard {
                 JOptionPane.showMessageDialog(frame, "Invalid Input or Error: " + ex.getMessage());
             }
         });
-
         // Add Tourist Place
         addPlaceBtn.addActionListener(e -> {
             JTextField idField = new JTextField();
@@ -157,17 +156,40 @@ public class AdminDashboard {
             };
 
             if (JOptionPane.showConfirmDialog(frame, fields, "Add Tourist Place", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
-                try (PreparedStatement ps = con.prepareStatement("INSERT INTO TouristPlace VALUES (?, ?, ?, ?)")) {
-                    ps.setInt(1, Integer.parseInt(idField.getText())); ps.setString(2, nameField.getText());
-                    ps.setString(3, categoryField.getText()); ps.setInt(4, Integer.parseInt(cityIdField.getText()));
-                    ps.executeUpdate();
-                    JOptionPane.showMessageDialog(frame, "Tourist Place Added!");
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage());
+                try {
+                    // 1. Trigger User-Defined Exception if required fields are empty
+                    if (idField.getText().trim().isEmpty() || nameField.getText().trim().isEmpty() || cityIdField.getText().trim().isEmpty()) {
+                        throw new model.TourismException("ID, Name, and City ID cannot be empty!");
+                    }
+
+                    // 2. Trigger NumberFormatException if ID or CityID are letters instead of numbers
+                    int placeId = Integer.parseInt(idField.getText().trim());
+                    int cityId = Integer.parseInt(cityIdField.getText().trim());
+                    String name = nameField.getText().trim();
+                    String category = categoryField.getText().trim();
+
+                    // 3. Trigger SQLException for Database logic
+                    try (PreparedStatement ps = con.prepareStatement("INSERT INTO TouristPlace VALUES (?, ?, ?, ?)")) {
+                        ps.setInt(1, placeId);
+                        ps.setString(2, name);
+                        ps.setString(3, category);
+                        ps.setInt(4, cityId);
+                        ps.executeUpdate();
+                        JOptionPane.showMessageDialog(frame, "Tourist Place Added Successfully!");
+                    }
+
+                } catch (model.TourismException ex) {
+                    // CATCH 1: Our Custom Exception
+                    JOptionPane.showMessageDialog(frame, "Validation Error: " + ex.getMessage(), "Input Error", JOptionPane.WARNING_MESSAGE);
+                } catch (NumberFormatException ex) {
+                    // CATCH 2: Built-in Java Exception (Number format)
+                    JOptionPane.showMessageDialog(frame, "Format Error: Place ID and City ID must be valid numbers!", "Format Error", JOptionPane.ERROR_MESSAGE);
+                } catch (SQLException ex) {
+                    // CATCH 3: Built-in Java Exception (Database error)
+                    JOptionPane.showMessageDialog(frame, "Database Error: " + ex.getMessage(), "DB Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
-
         // View Tourist Places
         viewPlaceBtn.addActionListener(e -> {
             try (Statement stmt = con.createStatement();

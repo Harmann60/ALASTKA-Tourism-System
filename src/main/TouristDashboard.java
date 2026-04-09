@@ -144,7 +144,7 @@ public class TouristDashboard {
             }
         });
 
-        // View My Bookings
+        // Jhanvi View Bookings
         myBookingsBtn.addActionListener(e -> {
             String query = "SELECT b.BookingID, b.BookingDate, a.AccommodationName, c.CityName " +
                     "FROM Booking b " +
@@ -173,7 +173,7 @@ public class TouristDashboard {
             }
         });
 
-        // Write a Review
+        // Indrani Write a Review
         addReviewBtn.addActionListener(e -> {
             JTextField reviewIdField = new JTextField();
             JTextField ratingField = new JTextField();
@@ -203,7 +203,7 @@ public class TouristDashboard {
             }
         });
 
-        // Edit My Review
+        // Ayush this is edit part My Review
         updateReviewBtn.addActionListener(e -> {
             JTextField reviewIdField = new JTextField();
             JTextField ratingField = new JTextField();

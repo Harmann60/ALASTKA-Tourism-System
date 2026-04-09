@@ -61,8 +61,6 @@ public class LoginApp {
                 JOptionPane.showMessageDialog(frame, "Please enter both Email and Password.", "Warning", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-
-            // Secure Database Query using PreparedStatement
             String query = "SELECT UserID, Name, Role FROM Users WHERE Email=? AND Password=?";
             try (PreparedStatement ps = con.prepareStatement(query)) {
                 ps.setString(1, email);
@@ -73,13 +71,8 @@ public class LoginApp {
                         int userId = rs.getInt("UserID");
                         String name = rs.getString("Name");
                         String role = rs.getString("Role");
-
                         JOptionPane.showMessageDialog(frame, "Login Successful! Welcome " + name + "\nRole: " + role);
-
-                        // Close the login window
                         frame.dispose();
-
-                        // Route to the correct dashboard based on Role
                         if ("ADMIN".equalsIgnoreCase(role)) {
                             openAdminDashboard(name);
                         } else {
@@ -96,10 +89,6 @@ public class LoginApp {
 
         frame.setVisible(true);
     }
-
-    // --- DASHBOARD ROUTING STUBS ---
-    // --- DASHBOARD ROUTING ---
-
     private static void openAdminDashboard(String adminName) {
         AdminDashboard adminDash = new AdminDashboard(adminName);
         adminDash.setVisible(true);
@@ -108,4 +97,4 @@ public class LoginApp {
         TouristDashboard userDash = new TouristDashboard(userId, userName);
         userDash.setVisible(true);
     }
-} // <-- This should be the very last bracket in your entire LoginApp.java file
+}
