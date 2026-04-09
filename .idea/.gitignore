@@ -7,11 +7,8 @@
 /dataSources/
 /dataSources.local.xml
 # IntelliJ IDEA
-.idea/
 out/
+.idea/
 *.iml
-
 # Compiled class files
 *.class
-
-out/
