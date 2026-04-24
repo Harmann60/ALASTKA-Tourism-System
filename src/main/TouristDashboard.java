@@ -39,18 +39,18 @@ public class TouristDashboard {
         explorePanel.add(suggestGemBtn);
 
         // --- TAB 2: Accommodations & Bookings ---
-        JPanel accPanel = new JPanel(new GridLayout(4, 1, 15, 15));
+        JPanel accPanel = new JPanel(new GridLayout(5, 1, 15, 15)); // Changed grid rows from 4 to 5
         accPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
 
         JButton viewAccBtn = new JButton("View Hotels & Resorts");
         JButton bookAccBtn = new JButton("Book an Accommodation");
         JButton myBookingsBtn = new JButton("View My Bookings");
+        JButton downloadTicketBtn = new JButton("Download Travel Ticket 📄"); // NEW BUTTON
 
         accPanel.add(viewAccBtn);
         accPanel.add(bookAccBtn);
         accPanel.add(myBookingsBtn);
-
-        // --- TAB 3: Reviews & Activities ---
+        accPanel.add(downloadTicketBtn); // ADDED TO PANEL
         // --- TAB 3: Reviews & Activities ---
         JPanel activityPanel = new JPanel(new GridLayout(5, 1, 15, 15)); // Changed grid rows from 4 to 5
         activityPanel.setBorder(BorderFactory.createEmptyBorder(30, 50, 30, 50));
@@ -284,6 +284,43 @@ public class TouristDashboard {
                 }
             } catch (SQLException ex) {
                 JOptionPane.showMessageDialog(frame, "Error fetching itinerary: " + ex.getMessage());
+            }
+        });
+        // 9. Download Travel Ticket (FILE EXPORT X-FACTOR)
+        downloadTicketBtn.addActionListener(e -> {
+            // Reusing your awesome Stored Procedure for this!
+            try (CallableStatement cstmt = con.prepareCall("{CALL Get_Tourist_Itinerary(?)}")) {
+                cstmt.setInt(1, loggedInUserId);
+                ResultSet rs = cstmt.executeQuery();
+
+                // Creates a text file right in your Java project folder
+                java.io.FileWriter writer = new java.io.FileWriter("My_ALASTKA_Itinerary.txt");
+                writer.write("======================================\n");
+                writer.write("      YOUR ALASTKA TRAVEL TICKET      \n");
+                writer.write("======================================\n\n");
+
+                boolean hasBookings = false;
+                while(rs.next()) {
+                    hasBookings = true;
+                    writer.write("⧗ Date: " + rs.getString("BookingDate") + "\n");
+                    writer.write("🛏 Hotel: " + rs.getString("AccommodationName") + "\n");
+                    writer.write("⌖ City: " + rs.getString("CityName") + "\n");
+                    writer.write("--------------------------------------\n");
+                }
+
+                if (!hasBookings) {
+                    writer.write("You have no bookings yet. Time to explore!\n");
+                }
+
+                writer.close(); // Save and close the file
+
+                JOptionPane.showMessageDialog(frame,
+                        "Success! Your travel ticket has been downloaded.\nLook for 'My_ALASTKA_Itinerary.txt' in your project folder.",
+                        "Download Complete",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Error generating ticket: " + ex.getMessage(), "Export Error", JOptionPane.ERROR_MESSAGE);
             }
         });
 
