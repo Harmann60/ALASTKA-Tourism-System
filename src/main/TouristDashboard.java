@@ -51,13 +51,16 @@ public class TouristDashboard {
         accPanel.add(myBookingsBtn);
 
         // --- TAB 3: Reviews & Activities ---
-        JPanel activityPanel = new JPanel(new GridLayout(4, 1, 15, 15));
+        // --- TAB 3: Reviews & Activities ---
+        JPanel activityPanel = new JPanel(new GridLayout(5, 1, 15, 15)); // Changed grid rows from 4 to 5
         activityPanel.setBorder(BorderFactory.createEmptyBorder(30, 50, 30, 50));
 
+        JButton viewReviewsBtn = new JButton("Read Community Reviews"); // NEW BUTTON
         JButton addReviewBtn = new JButton("Write a Review");
         JButton updateReviewBtn = new JButton("Edit My Review");
 
-        activityPanel.add(new JLabel("Share Your Experience", SwingConstants.CENTER));
+        activityPanel.add(new JLabel("Share & Read Experiences", SwingConstants.CENTER));
+        activityPanel.add(viewReviewsBtn); // ADDED TO PANEL
         activityPanel.add(addReviewBtn);
         activityPanel.add(updateReviewBtn);
 
@@ -214,9 +217,20 @@ public class TouristDashboard {
 
                         ps.executeUpdate();
 
+                        // === CALLING THE MYSQL STORED FUNCTION ===
                         String successMsg = "Booking Confirmed! Have a great trip!";
                         if (currentPoints > 0) {
-                            int discount = currentPoints * 10;
+                            double discount = 0.0;
+                            try (PreparedStatement funcStmt = con.prepareStatement("SELECT Calculate_Discount(?) AS DiscountAmt")) {
+                                funcStmt.setInt(1, currentPoints);
+                                ResultSet rsFunc = funcStmt.executeQuery();
+                                if (rsFunc.next()) {
+                                    discount = rsFunc.getDouble("DiscountAmt"); // Database does the math!
+                                }
+                            } catch (SQLException ex) {
+                                System.out.println("Function call failed: " + ex.getMessage());
+                            }
+
                             successMsg += "\n\n💎 LOYALTY REWARD APPLIED 💎\nYou used " + currentPoints + " Explorer Points.\nA discount of ₹" + discount + " will be applied at check-in!";
                         }
 
@@ -232,18 +246,18 @@ public class TouristDashboard {
             }
         });
 
-        // 5. View Bookings
+        // 5. View Bookings (NOW USING A STORED PROCEDURE!)
         myBookingsBtn.addActionListener(e -> {
-            String query = "SELECT b.BookingID, b.BookingDate, a.AccommodationName, c.CityName " +
-                    "FROM Booking b " +
-                    "JOIN Accommodation a ON b.AccommodationID = a.AccommodationID " +
-                    "JOIN City c ON a.CityID = c.CityID " +
-                    "WHERE b.UserID = ?";
-            try (PreparedStatement ps = con.prepareStatement(query)) {
-                ps.setInt(1, loggedInUserId);
-                try (ResultSet rs = ps.executeQuery()) {
-                    StringBuilder sb = new StringBuilder("Your Bookings:\n------------------------------------\n");
+            // We use CallableStatement instead of PreparedStatement to call Procedures
+            String query = "{CALL Get_Tourist_Itinerary(?)}"; // MAKE SURE THIS MATCHES YOUR PROCEDURE NAME IN MYSQL
+
+            try (CallableStatement cstmt = con.prepareCall(query)) {
+                cstmt.setInt(1, loggedInUserId); // Pass the logged-in user's ID
+
+                try (ResultSet rs = cstmt.executeQuery()) {
+                    StringBuilder sb = new StringBuilder("Your Bookings via Stored Procedure:\n------------------------------------\n");
                     boolean hasBookings = false;
+
                     while (rs.next()) {
                         hasBookings = true;
                         sb.append("Booking ID: ").append(rs.getInt("BookingID"))
@@ -257,7 +271,7 @@ public class TouristDashboard {
                     JOptionPane.showMessageDialog(frame, sb.toString(), "My Bookings", JOptionPane.INFORMATION_MESSAGE);
                 }
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(frame, "Error fetching bookings: " + ex.getMessage());
+                JOptionPane.showMessageDialog(frame, "Error fetching itinerary: " + ex.getMessage());
             }
         });
 
@@ -348,6 +362,46 @@ public class TouristDashboard {
                 } catch (SQLException ex) {
                     JOptionPane.showMessageDialog(frame, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
+            }
+        });
+        // 8. View All Reviews
+        viewReviewsBtn.addActionListener(e -> {
+            // We JOIN 3 tables to get the Review, the Place Name, and the User who wrote it
+            String query = "SELECT r.Rating, r.Comment, p.PlaceName, u.Name " +
+                    "FROM Review r " +
+                    "JOIN TouristPlace p ON r.PlaceID = p.PlaceID " +
+                    "JOIN Users u ON r.UserID = u.UserID " +
+                    "ORDER BY r.ReviewID DESC";
+
+            try (Statement stmt = con.createStatement();
+                 ResultSet rs = stmt.executeQuery(query)) {
+
+                StringBuilder sb = new StringBuilder("Community Reviews:\n------------------------------------\n");
+                boolean hasReviews = false;
+
+                while (rs.next()) {
+                    hasReviews = true;
+                    sb.append("📍 ").append(rs.getString("PlaceName"))
+                            .append("\n👤 By: ").append(rs.getString("Name"))
+                            .append(" | ⭐ ").append(rs.getInt("Rating")).append("/5")
+                            .append("\n💬 \"").append(rs.getString("Comment")).append("\"\n\n");
+                }
+
+                if (!hasReviews) {
+                    sb.append("No reviews yet. Be the first to write one!");
+                }
+
+                // Wrap in a JScrollPane so it's scrollable if there are many reviews
+                JTextArea textArea = new JTextArea(sb.toString());
+                textArea.setEditable(false);
+                textArea.setOpaque(false);
+                JScrollPane scrollPane = new JScrollPane(textArea);
+                scrollPane.setPreferredSize(new Dimension(400, 300));
+
+                JOptionPane.showMessageDialog(frame, scrollPane, "Community Reviews", JOptionPane.INFORMATION_MESSAGE);
+
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(frame, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
     }

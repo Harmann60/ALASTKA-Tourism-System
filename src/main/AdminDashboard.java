@@ -9,8 +9,10 @@ public class AdminDashboard {
 
     private Connection con;
     private JFrame frame;
+    private String adminName;
 
     public AdminDashboard(String adminName) {
+        this.adminName = adminName;
         con = DBConnection.getConnection();
 
         frame = new JFrame("Admin Dashboard - ALASTKA Tourism");
@@ -18,7 +20,8 @@ public class AdminDashboard {
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout()); // Ensures we can put tabs in center and logout at bottom
-
+        JPanel mainPanel = new JPanel(new GridLayout(3, 1, 15, 15));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(30, 50, 30, 50));
         JTabbedPane tabbedPane = new JTabbedPane();
 
         // --- TAB 1: User Management ---
@@ -33,6 +36,14 @@ public class AdminDashboard {
         userPanel.add(viewUsersBtn);
         userPanel.add(addUserBtn);
         userPanel.add(deleteUserBtn);
+        JButton viewPendingBtn = new JButton("View Pending Hidden Gems 🔍");
+        JButton approveGemBtn = new JButton("Approve a Hidden Gem ✅");
+        approveGemBtn.setBackground(new Color(40, 167, 69)); // Green for approval
+        approveGemBtn.setForeground(Color.WHITE);
+
+        mainPanel.add(new JLabel("Admin Controls: Gamification Engine", SwingConstants.CENTER));
+        mainPanel.add(viewPendingBtn);
+        mainPanel.add(approveGemBtn);
 
         // --- TAB 2: Tourist Place Management ---
         JPanel placePanel = new JPanel(new GridLayout(4, 1, 15, 15));
@@ -49,6 +60,11 @@ public class AdminDashboard {
 
         tabbedPane.addTab("👤 User Management", userPanel);
         tabbedPane.addTab("🏛️ Tourist Places", placePanel);
+        tabbedPane.addTab("👤 User Management", userPanel);
+        tabbedPane.addTab("🏛️ Tourist Places", placePanel);
+        tabbedPane.addTab("💎 Gamification", mainPanel); // <--- ADD THIS LINE!
+
+        // --- BOTTOM PANEL FOR LOGOUT ---
 
         // --- BOTTOM PANEL FOR LOGOUT ---
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -141,6 +157,80 @@ public class AdminDashboard {
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(frame, "Invalid Input or Error: " + ex.getMessage());
+            }
+        });
+        // 1. View all Gems waiting for approval
+        viewPendingBtn.addActionListener(e -> {
+            String query = "SELECT LocationName, Description, DiscoveredBy_UserID FROM Hidden_Gems WHERE ApprovalStatus = 'Pending'";
+            try (Statement stmt = con.createStatement();
+                 ResultSet rs = stmt.executeQuery(query)) {
+
+                StringBuilder sb = new StringBuilder("Pending Submissions:\n------------------------------------\n");
+                boolean hasPending = false;
+
+                while (rs.next()) {
+                    hasPending = true;
+                    sb.append("📍 Location: ").append(rs.getString("LocationName"))
+                            .append("\n   Description: ").append(rs.getString("Description"))
+                            .append("\n   Submitted By User ID: ").append(rs.getInt("DiscoveredBy_UserID"))
+                            .append("\n\n");
+                }
+
+                if (!hasPending) {
+                    sb.append("No pending submissions right now! Everything is caught up.");
+                }
+
+                // Show in a scrollable text area just in case descriptions are long
+                JTextArea textArea = new JTextArea(sb.toString());
+                textArea.setEditable(false);
+                JScrollPane scrollPane = new JScrollPane(textArea);
+                scrollPane.setPreferredSize(new Dimension(400, 300));
+
+                JOptionPane.showMessageDialog(frame, scrollPane, "Pending Submissions", JOptionPane.INFORMATION_MESSAGE);
+
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(frame, "Database Error: " + ex.getMessage());
+            }
+        });
+
+        // 2. Approve a Gem (This fires the MySQL Trigger!)
+        approveGemBtn.addActionListener(e -> {
+            JTextField locNameField = new JTextField();
+
+            Object[] fields = {
+                    "Enter the exact Location Name to approve:", locNameField
+            };
+
+            if (JOptionPane.showConfirmDialog(frame, fields, "Approve Hidden Gem", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+                String locName = locNameField.getText().trim();
+
+                if (locName.isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "Location Name cannot be empty!", "Input Error", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                // We run the UPDATE query. If it successfully changes to 'Approved',
+                // MySQL automatically fires our Trigger and gives the user 50 points!
+                String updateQuery = "UPDATE Hidden_Gems SET ApprovalStatus = 'Approved' WHERE LocationName = ? AND ApprovalStatus = 'Pending'";
+
+                try (PreparedStatement ps = con.prepareStatement(updateQuery)) {
+                    ps.setString(1, locName);
+                    int rowsAffected = ps.executeUpdate();
+
+                    if (rowsAffected > 0) {
+                        JOptionPane.showMessageDialog(frame,
+                                "Success! '" + locName + "' is now Approved.\nThe user has been automatically rewarded 50 Explorer Points!",
+                                "Approval Complete",
+                                JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(frame,
+                                "Could not approve. Either the location doesn't exist, or it is already approved.",
+                                "Approval Failed",
+                                JOptionPane.WARNING_MESSAGE);
+                    }
+                } catch (SQLException ex) {
+                    JOptionPane.showMessageDialog(frame, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
         // Add Tourist Place
