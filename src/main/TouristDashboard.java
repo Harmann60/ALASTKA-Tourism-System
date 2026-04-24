@@ -87,7 +87,7 @@ public class TouristDashboard {
             LoginApp.main(null);
         });
 
-        // 1. View Tourist Places
+        // 1. View Tourist Places (NOW SCROLLABLE)
         viewPlacesBtn.addActionListener(e -> {
             String query = "SELECT p.PlaceName, p.Category, c.CityName, co.CountryName " +
                     "FROM TouristPlace p " +
@@ -95,18 +95,30 @@ public class TouristDashboard {
                     "JOIN Country co ON c.CountryID = co.CountryID";
             try (Statement stmt = con.createStatement();
                  ResultSet rs = stmt.executeQuery(query)) {
+
                 StringBuilder sb = new StringBuilder("Must-Visit Places:\n------------------------------------\n");
                 while (rs.next()) {
                     sb.append("📍 ").append(rs.getString("PlaceName"))
                             .append(" (").append(rs.getString("Category")).append(")\n")
                             .append("   Location: ").append(rs.getString("CityName")).append(", ").append(rs.getString("CountryName")).append("\n\n");
                 }
-                JOptionPane.showMessageDialog(frame, sb.toString(), "Explore Places", JOptionPane.INFORMATION_MESSAGE);
+
+                // --- THE SCROLL PANE MAGIC ---
+                JTextArea textArea = new JTextArea(sb.toString());
+                textArea.setEditable(false); // Prevents user from typing in the box
+                textArea.setOpaque(false);
+                textArea.setFont(new Font("SansSerif", Font.PLAIN, 14)); // Makes the text a bit nicer
+                textArea.setCaretPosition(0); // Forces the scrollbar to start at the top!
+
+                JScrollPane scrollPane = new JScrollPane(textArea);
+                scrollPane.setPreferredSize(new Dimension(400, 350)); // Limits the popup size
+
+                JOptionPane.showMessageDialog(frame, scrollPane, "Explore Places", JOptionPane.INFORMATION_MESSAGE);
+
             } catch (SQLException ex) {
                 JOptionPane.showMessageDialog(frame, "Database Error: " + ex.getMessage());
             }
         });
-
         // 2. Suggest a Hidden Gem
         suggestGemBtn.addActionListener(e -> {
             JTextField locNameField = new JTextField();
